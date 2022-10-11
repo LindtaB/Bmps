@@ -1,0 +1,51 @@
+library(dplyr)
+library(heatmaply)
+bulk.bmps <- read.csv("D:/normcounts.csv", sep = ",")
+bulk.bmps.unique <- distinct(bulk.bmps,Name, .keep_all= TRUE)
+rownames(bulk.bmps.unique) <- bulk.bmps.unique$Name
+bulk.bmps.unique.numeric <- bulk.bmps.unique %>% 
+  dplyr::select(where(is.numeric))
+
+bulk.bmps.zscore <- t(apply(bulk.bmps.unique.numeric, 1, function(bulk.bmps.unique.numeric) (bulk.bmps.unique.numeric-mean(bulk.bmps.unique.numeric))/sd(bulk.bmps.unique.numeric)))
+bulk.bmps.zscore.01 <- as.data.frame(bulk.bmps.zscore)
+
+
+heatmap.genes <-  c( "Lmo7", "Mpp5", "Itgb1", "Tut7", "Cystm1",
+                     "Aldh1b1", "Cdca7", "Lgals12", "Sfxn1", "Ppp1r1b",
+                     "Iqgap2", "Maf", "Klf4", "Abcd3", "Rfk",
+                     "Pla2g4a", "Maged1", "Dtx4","Miga1", "Afap1l1",
+                     "Lama3", "Stxbp1", "Tnfrsf11b", "Rab11fip5", "Blvrb",
+                     "B4galnt1", "Ces1e", "Mylk3", "Abat", "Sfrp5",
+                     "Id1", "Gjb4", "Pmepa1", "Alcam", "Aldh1a3",
+                     "Bmp3", "Aqp4", "Hpd", "Lgals12", "Rassf4")
+
+bulk.bmps.zscore.filter <- bulk.bmps.zscore.01 %>% filter(row.names(bulk.bmps.zscore) %in% heatmap.genes)
+
+colnames(bulk.bmps.zscore.filter) <-colnames(bulk.bmps.zscore.filter)%>%
+  str_replace( "Untreated", "Untreated-") %>%
+  str_replace( "BMP2", "Bmp2-") %>%
+  str_replace( "BMP3", "Bmp3-") %>%
+  str_replace( "BMP4", "Bmp4-") %>%
+  str_replace( "BMP5", "Bmp5-") %>%
+  str_replace( "BMP7", "Bmp7-") %>%
+  str_replace( "IV", "c") %>%
+  str_replace( "VI", "d") %>%
+  str_replace( "III", "b") %>%
+  str_replace( "II", "a") 
+
+
+bulk.bmps.zscore.filter.cp<- bulk.bmps.zscore.filter
+
+bulk.bmps.zscore.filter.cp.x<- factor( sub("-.*", "", colnames(bulk.bmps.zscore.filter)))
+
+
+heatmaply(bulk.bmps.zscore.filter[order(match(rownames(bulk.bmps.zscore.filter), heatmap.genes)), , drop = FALSE],
+          show_dendrogram = c(FALSE, TRUE),
+          subplot_heights=c(0.08, 0.92),
+          fontsize_row = 11,
+          fontsize_col = 12,
+          cellnote_size	= 30,
+          colorbar_thickness = 300,
+          colors = viridis(n=10, alpha = 1, begin = 0, end = 1, option = "A"),
+          key.title="Z-score",
+)
