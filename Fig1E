@@ -1,0 +1,146 @@
+// set channels
+var C1 = "DAPI";
+var C2 = "RED";
+var C3 = "OVERLAP";
+
+// variables
+var i, area, unit, pxlw, pxlh, depth, VolDAPI = 0, VolRED = 0, VolOVERLAP = 0;
+
+getVoxelSize(pxlw, pxlh, depth, unit)
+
+// selection drawn in input data? (pomocí Polygon selection)
+var selType = selectionType();
+if (selType > -1) {
+	setBackgroundColor(0, 0, 0);
+	run("Clear Outside", "stack");
+	run("Select None");
+}
+
+var title = getTitle();
+var dir = getDirectory("image");
+setOption("BlackBackground", true);
+run("Split Channels");
+
+// channel renaming
+selectWindow("C1-" + title);
+rename(C1);
+run("Duplicate...", "duplicate");
+rename(C1 + "-COPY");
+
+selectWindow("C2-" + title);
+rename(C2);
+run("Duplicate...", "duplicate");
+rename(C2 + "-COPY");
+
+////////
+// DAPI
+selectWindow(C1);
+waitForUser("Do manual thresholding of " + C1 + " by CTRL+SHIFT+T. Press Apply!");
+
+//setThreshold(112, 65535);
+//run("Convert to Mask", "method=Default background=Default black");
+
+run("Remove Outliers...", "radius=1 threshold=50 which=Bright stack");
+run("Close-", "stack");
+
+run("Duplicate...", "duplicate");
+rename(C1 + "-MASK");
+
+VolDAPI = MeasureChannelVolume(C1);
+selectWindow(C1);
+close();
+
+print("Volume of the thresholded signal " + C1 + " = " + VolDAPI*depth + " " + unit + "3");
+
+///////
+// RED
+selectWindow(C2);
+waitForUser("Do manual thresholding of " + C2 + " by CTRL+SHIFT+T. Press Apply!");
+
+//setThreshold(140, 65535);
+//run("Convert to Mask", "method=Default background=Default black");
+
+run("Remove Outliers...", "radius=1 threshold=50 which=Bright stack");
+run("Close-", "stack");
+
+run("Duplicate...", "duplicate");
+rename(C2 + "-MASK");
+
+VolRED = MeasureChannelVolume(C2);
+selectWindow(C2);
+close();
+
+print("Volume of the thresholded signal " + C2 + " = " + VolRED*depth + " " + unit + "3");
+print("Volume rate " + C2 + "/" + C1 + " = " + VolRED/VolDAPI*100 + "%");
+
+///////////
+// OVERLAP
+selectWindow(C1 + "-MASK");
+run("Duplicate...", "duplicate");
+run("Divide...", "value=255 stack");
+rename(C1 + "-BIT-MASK");
+imageCalculator("Multiply create stack", C2 + "-MASK", C1 + "-BIT-MASK");
+selectWindow("Result of " + C2 + "-MASK");
+rename("OVERLAP");
+selectWindow(C1 + "-BIT-MASK");
+close();
+
+VolOVERLAP = MeasureChannelVolume(C3);
+
+print("");
+print("Volume of overlap of both signals = " + VolOVERLAP*depth + " " + unit + "3");
+print("Volume rate Overlap/DAPI = " + (VolOVERLAP/VolDAPI)*100 + "%");
+print("Volume rate Overlap/RED = " + (VolOVERLAP/VolRED)*100 + "%");
+
+selectWindow("OVERLAP");
+close();
+
+////////////////////////
+// Manders coefficients
+selectWindow(C1 + "-MASK");
+run("Divide...", "value=255 stack");
+imageCalculator("Multiply create stack", C1 + "-COPY",C1 + "-MASK");
+rename(C1 + "-thresholded");
+
+selectWindow(C2 + "-MASK");
+run("Divide...", "value=255 stack");
+imageCalculator("Multiply create stack", C2 + "-COPY", C2 + "-MASK");
+rename(C2 + "-thresholded");
+
+run("JACoP ", "imga=" + C1 + "-thresholded imgb=" + C2 + "-thresholded thra=1 thrb=1 pearson mm");
+
+run("Merge Channels...", "c1=" + C2 + "-thresholded c3=" + C1 + "-thresholded create");
+rename("OVERLAP-DAPI-RED");
+
+selectWindow(C1 + "-MASK");
+close();
+selectWindow(C2 + "-MASK");
+close();
+selectWindow(C1 + "-COPY");
+close();
+selectWindow(C2 + "-COPY");
+close();
+
+////////////
+// FUNCTION
+// iterating through the stack and summing up the signal volumes
+function MeasureChannelVolume(ChnlString) { 
+	var volume = 0; 
+	selectWindow(ChnlString);
+	run("Grays");
+	//run("Invert", "stack");	
+	for (i = 1; i <= nSlices; i++) {
+	    setSlice(i);
+	    // do something here;
+		run("Create Selection");
+		// Selection created in the actual pic?
+		var selTypeInPic = selectionType();
+		if (selTypeInPic > -1) {
+			getStatistics(area);
+			// accumulating volume
+			volume += area;
+		}
+		run("Select None");
+	}
+	return volume;
+}
