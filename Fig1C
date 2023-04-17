@@ -38,7 +38,7 @@ whole.git.08 <- FindClusters(whole.git.07, resolution = 0.5)
 
 
 
-DotPlot(whole.git.08, features = c("Bmp1","Bmp2", "Bmp3", "Bmp4", "Bmp5","Bmp6", "Bmp7"),col.min = 0, col.max = 1, cols=c("gray", "green"), group.by = "orig.ident", assay = "RNA",  scale.min = 0, scale.max = 100)+
+DotPlot(whole.git.08, features = c("Bmp1","Bmp2", "Bmp3", "Bmp4", "Bmp5","Bmp6", "Bmp7", "Tgfb1"),col.min = 0, col.max = 1, cols=c("gray", "green"), group.by = "orig.ident", assay = "RNA",  scale.min = 0, scale.max = 100)+
   RotatedAxis() + 
   FontSize(15, 18) +
   xlab('') +  
